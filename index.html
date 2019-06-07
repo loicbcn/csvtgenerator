@@ -93,7 +93,7 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
   line-height: 1.5;
 }    #container{ padding: 1rem; }
-    #csv_colle, #result_csvt{ width:100%; height:150px; }
+    #csv_colle, #result_csvt, #result_fieldsnames{ width:100%; height:150px; }
     #tbseltypes{
         border-collapse:collapse;
     }
@@ -132,7 +132,9 @@ body {
     <div id="contresultcsvt">
         <textarea id="result_csvt"></textarea>
     </div>
-
+    <h3>Noms de champs "nettoyés"</h3>
+    <p>Peut éventuellement remplacer la première ligne du csv avec des noms de colonnes plus proches de ce qu'attent une base de données (pas d'espace ni caractères spéciaux)</p>
+    <textarea id="result_fieldsnames"></textarea>
     <footer>
     <h3>Informations</h3>
         Pour lire le csv, la page utilise la librairie javascript "<a href="https://www.papaparse.com/">Papa Parse 5, the powerful, in-browser CSV parser for big boys and girls</a>", qui semble bien fonctionner.
@@ -186,7 +188,7 @@ $(function(){
                 }                
             }
         }
-console.log(types);
+
         // On propose un formulaire avec tous les champs trouvés, et leur type
         var html = '<table id="tbseltypes"><tr><th>Champs</th><th>Type prédéfini<sup>(2)</sup></th><th>Forcer le type</th><th>Précision</th></tr>';
         var morecommon;
@@ -211,6 +213,7 @@ console.log(types);
             return false;
         }
         var csvt = [];
+        var cleanfields = [];
         var seltype;
         var forced = '';
         var precision = '';
@@ -225,9 +228,14 @@ console.log(types);
                 seltype += '(' + precision + ')';
             }
             csvt.push('"' + seltype + '"');
+            // ajout des noms de champs "nettoyés"
+            cleanfields.push(string_to_slug(parsed.data[0][i]));
         }
-        
+
         $('#result_csvt').val(csvt.join(','));
+        $('#result_fieldsnames').val(cleanfields.join(parsed.meta.delimiter));
+        
+
 
     });
 
@@ -314,7 +322,7 @@ function isValidTime(strTime) {
 function htmlfield(data){
 return `
     <tr>
-        <td><label for="${data.fid}">${data.nom}</label></td>
+        <td><label for="type_${data.fid}">${data.nom}</label></td>
         <td><input type="text" id="type_${data.fid}" value="${data.type}"></td>
         <td>
             <select id="seltype_${data.fid}">
@@ -345,6 +353,24 @@ function showFile() {
         $('#csv_colle').val(event.target.result);
     }
     reader.readAsText(file);
+}
+
+function string_to_slug(str) {
+  str = str.replace(/^\s+|\s+$/g, ''); // trim
+  str = str.toLowerCase();
+  
+  // remove accents, swap ñ for n, etc
+  var from = "àáäâèéëêìíïîòóöôùúüûñç·/_,:;";
+  var to   = "aaaaeeeeiiiioooouuuunc------";
+  for (var i=0, l=from.length ; i<l ; i++) {
+    str = str.replace(new RegExp(from.charAt(i), 'g'), to.charAt(i));
+  }
+
+  str = str.replace(/[^a-z0-9 -]/g, '') // remove invalid chars
+    .replace(/\s+/g, '_') // collapse whitespace and replace by -
+    .replace(/-+/g, '_'); // collapse dashes
+
+  return str;
 }
 
 </script>
