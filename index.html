@@ -128,7 +128,8 @@ body {
     <h3>Résultat:</h3>
     <div id="choixtype"></div>
     <input type="button" id="generate" value="Générer le csvt" disabled>
-    <a id="download_link" download="mon.csvt" href=”” >Télécharger le csvt</a> (Attention à bien avoir cliquer sur "Générer le csvt avant de télécharger le fichier")
+    <input type="checkbox" id="guillemets" value="avec des guillemets" checked><label for="guillemets">Avec des guillemets</label> --- 
+    <a id="download_link" download="mon.csvt" href=”” >Télécharger le csvt</a> (Attention à bien avoir cliqué sur "Générer le csvt avant de télécharger le fichier")
     <div id="contresultcsvt">
         <textarea id="result_csvt"></textarea>
     </div>
@@ -217,6 +218,8 @@ $(function(){
         var seltype;
         var forced = '';
         var precision = '';
+        var guillemets = $('#guillemets').prop('checked');
+
         for (i=0; i<numfields; i++) {
             seltype = $('#type_' + i).val();
             forced = $('#seltype_' + i).val();
@@ -227,7 +230,11 @@ $(function(){
             if ($.trim(precision) != '' && (isInt(precision) || isReal(precision)) && (precision*1 > 0 && precision.length < 4)) {
                 seltype += '(' + precision + ')';
             }
-            csvt.push('"' + seltype + '"');
+            if (guillemets) {
+                csvt.push('"' + seltype + '"');
+            } else {
+                csvt.push(seltype);
+            }
             // ajout des noms de champs "nettoyés"
             cleanfields.push(string_to_slug(parsed.data[0][i]));
         }
