@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -109,11 +110,13 @@ body {
 <div id="container">
     <h1>Création de .csvt pour fichiers .csv</h1>
     <p>
-    Afin d'indiquer à QGIS le format des champs composant un fichier csv, on peut accompagner ce fichier .csv d'un fichier .csvt portant le même nom.<br>
+    Afin d'indiquer à QGIS ou autre le format des champs composant un fichier csv, on peut accompagner ce fichier .csv d'un fichier .csvt portant le même nom.<br>
     Cette page se propose de créer le .csvt à partir d'un échantillon du .csv qu'il faut coller dans le champ prévu à cet effet.    
     </p>
     <p>
     Il est aussi possible de charger le fichier .csv. Attention cependant, en donnant un trop gros volume de données, le script de la page peut prendre beaucoup de temps.<br>
+    Le principe est donc plutôt de coller ou uploader un <strong>échantillon de données</strong> (toutes les colonnes, mais quelques lignes. 
+    A noter que ce sera le poste client qui souffrira et pas le serveur, car tout se passe côté client.<br>
     Après avoir fourni le csv et cliqué sur "Traiter le csv", si tout se passe bien, la page propose pour chaque champ un type de donnée, basé sur la représentation des types
     de valeur pour chaque champ. Par exemple, si un champ contient 12 valeurs de type chaîne et 5 de type entier, alors le type prédéfini est "String", etc... 
     <br>
