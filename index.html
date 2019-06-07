@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -187,7 +186,7 @@ $(function(){
                 }                
             }
         }
-
+console.log(types);
         // On propose un formulaire avec tous les champs trouvés, et leur type
         var html = '<table id="tbseltypes"><tr><th>Champs</th><th>Type prédéfini<sup>(2)</sup></th><th>Forcer le type</th><th>Précision</th></tr>';
         var morecommon;
@@ -250,14 +249,14 @@ function whatype(data){
     }
     else if (isValidDate(testamos)) {
         return 'Date';
+    } else if (isValidTime(testamos)) {
+        return 'Time';
     } else if (testamos.length > 1 && testamos.substr(0,1) == '0') {
         return 'String';
     } else if (isInt(testamos)) {
         return 'Integer';
     } else if (isReal(testamos)) {
         return 'Real';
-    } else if (isValidTime(testamos)) {
-        return 'Time';
     } else {
         return 'String';
     }
