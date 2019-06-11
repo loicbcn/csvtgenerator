@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -250,7 +249,7 @@ $(function(){
 
 function whatype(data){
     var testamos = $.trim(data);
-    if (testamos == '') {
+    if (testamos == '') { // si vide, alors string
         return 'String';
     } else if (isValidDateTime(testamos)) {
         return 'DateTime';
@@ -259,11 +258,11 @@ function whatype(data){
         return 'Date';
     } else if (isValidTime(testamos)) {
         return 'Time';
-    } else if (testamos.length > 1 && testamos.substr(0,1) == '0') {
+    } else if (testamos.length > 1 && testamos.substr(0,1) == '0') { // Par exemple INSEE COMM = 08000 -> string
         return 'String';
     } else if (isInt(testamos)) {
         return 'Integer';
-    } else if (isReal(testamos)) {
+    } else if (isReal(testamos.replace(',','.'))) { // Tester les valeurs telles que '50.5' et '50,5'
         return 'Real';
     } else {
         return 'String';
