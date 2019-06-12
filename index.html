@@ -94,7 +94,16 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
   line-height: 1.5;
 }    #container{ padding: 1rem; }
-    #csv_colle, #result_csvt, #result_fieldsnames{ width:100%; height:150px; }
+    #csv_colle, #result_csvt, #result_fieldsnames, #result_vrt{ 
+        width:100%; 
+        height:150px; 
+    	background: linear-gradient(-90deg, rgba(0, 0, 0, .01) 1px, transparent 1px), linear-gradient(rgba(0, 0, 0, .01) 1px, transparent 1px), linear-gradient(-90deg, rgba(0, 0, 0, .01) 1px, transparent 1px), linear-gradient(rgba(0, 0, 0, .01) 1px, transparent 1px), linear-gradient(transparent 3px, transparent 3px, transparent 78px, transparent 78px), linear-gradient(-90deg, transparent 1px, transparent 1px), linear-gradient(-90deg, transparent 3px, transparent 3px, transparent 78px, transparent 78px), linear-gradient(transparent 1px, transparent 1px), transparent;
+	    background-size: 12px 12px, 12px 12px, 12px 12px, 12px 12px, 12px 12px, 12px 12px, 12px 12px, 12px 12px;
+	    background-color: #f8f8f8;
+    	font-size: 1.2rem;
+	    line-height: 1.2rem;
+	    padding: 0.3rem;
+        }
     #tbseltypes{
         border-collapse:collapse;
     }
@@ -103,6 +112,7 @@ body {
     #tbseltypes th, #tbseltypes td{ padding:4px; }
     #tbseltypes th {border-bottom: 2px solid #333;}
     #tbseltypes td{ border-bottom: 1px dotted #333; }
+    h3 label, h3 a, h3 sup { font-weight:normal; font-size: 1.4rem; }
     </style>
 </head>
 <body>
@@ -120,11 +130,15 @@ body {
     de valeur pour chaque champ. Par exemple, si un champ contient 12 valeurs de type chaîne et 5 de type entier, alors le type prédéfini est "String", etc... 
     <br>
     Pour chaque champ, il est possible de forcer le type à un autre que celui prédéfini. Il est aussi possible de saisir une précision. 
-    (voir <a href="https://docs.qgis.org/2.18/fr/docs/user_manual/managing_data_source/supported_data.html#csvt-files">cette page</a> pour plus d'information).
+    (voir <a href="https://docs.qgis.org/2.18/fr/docs/user_manual/managing_data_source/supported_data.html#csvt-files">ici</a> 
+    et <a href="https://gdal.org/drivers/vector/csv.html">là</a> pour plus d'information).
 
     </p>
     <h3>Csv:</h3>
-    <label for="csv_colle">Coller le texte csv ici, ou charger un fichier <sup>(1)</sup> <input type="file" onchange="showFile()"></label><br>
+    <label for="csv_colle">Coller le texte csv ici, ou charger un fichier <sup>(1)</sup> 
+        <input type="file" id="uploaded_csv" onchange="showFile()">
+        <input type="hidden" id="uploaded_csv_name" value="">
+    </label><br>
     <textarea id="csv_colle"></textarea><br>
     <input type="button" id="traite_csv_colle" value="Traiter le csv"> (Lit le csv en entrée et propose pour chaque champ un type prédéfini qu'il est possible de modifier)
     <div class="note"><sup>(1)</sup> Eviter les trop gros fichiers.</div>'
@@ -136,6 +150,13 @@ body {
     <div id="contresultcsvt">
         <textarea id="result_csvt"></textarea>
     </div>
+    <h3>VRT <input type="checkbox" id="vrtusecleanfields" value="1">
+        <label for="vrtusecleanfields">Utiliser les noms de champs "nettoyés"</label> --- 
+        <input type="text" id="vrtsrs" value="2154">
+        <label for="vrtsrs">Spécifier un sytème de projection si nécessaire</label>
+        <a id="download_link_vrt" download="mon.vrt" href=”” >Télécharger le vrt</a>
+    </h3>
+    <textarea id="result_vrt"></textarea>
     <h3>Noms de champs "nettoyés"</h3>
     <p>Peut éventuellement remplacer la première ligne du csv avec des noms de colonnes plus proches de ce qu'attend une base de données (pas d'espace ni caractères spéciaux)</p>
     <textarea id="result_fieldsnames"></textarea>
@@ -157,6 +178,12 @@ License: MIT
 
 $(function(){
     var parsed;
+    // Vider les infos du champ file
+    $('#uploaded_csv_name, #uploaded_csv').val('');
+
+    $('#csv_colle').on('change', function(){
+        $('#uploaded_csv_name, #uploaded_csv').val('');
+    });
 
     $('#traite_csv_colle').on('click', function(){
         var csv_colle = $.trim($('#csv_colle').val());
@@ -211,6 +238,9 @@ $(function(){
         var forced = '';
         var precision = '';
         var guillemets = $('#guillemets').prop('checked');
+        var vrtFields = [];
+        var vrtusecleanfields = $('#vrtusecleanfields').prop('checked');
+        var vrtpointgeom = [];
 
         for (i=0; i<numfields; i++) {
             seltype = $('#type_' + i).val();
@@ -228,23 +258,64 @@ $(function(){
                 csvt.push(seltype);
             }
             // ajout des noms de champs "nettoyés"
-            cleanfields.push(string_to_slug(parsed.data[0][i]));
+            var cleaned = string_to_slug(parsed.data[0][i]);
+            cleanfields.push(cleaned);
+            
+            var fieldname = vrtusecleanfields ? cleaned : parsed.data[0][i]; 
+
+            if (seltype == 'WKT' || seltype == 'WKB') {
+                vrtFields.push(`<GeometryField encoding="${seltype}" name="${fieldname}" field="${fieldname}"/>`);
+            } else if (seltype == 'CoordX' || seltype == 'CoordY' || seltype == 'CoordZ' || seltype == 'CoordM') {
+                vrtpointgeom.push(seltype.substr(-1).toLowerCase() + '="' + fieldname + '"');
+            } else {
+                vrtFields.push(`<Field name="${fieldname}" src="${fieldname}" type="${seltype}" nullable="true"/>`);
+            }
+            
         }
-
+        if (vrtpointgeom.length > 0) {
+            var xyzmFields = vrtpointgeom.join(' ');
+            var layersrs = '2154';
+            if ($('#vrtsrs').val() != '') {
+                layersrs = $('#vrtsrs').val();
+            }
+            vrtFields.push(`<GeometryField encoding="PointFromColumns" ${xyzmFields}/>`);
+            vrtFields.push(`<LayerSRS>${layersrs}</LayerSRS>`);
+        }
+        var filename = 'monFichier';
+        if ($('#uploaded_csv_name').val() != '') {
+            filename = $('#uploaded_csv_name').val().replace('.csv','');
+        }
+        var vrt = getVrtBaseTemplate(filename,vrtFields.join("\r\n\t"));
+ 
         $('#result_csvt').val(csvt.join(','));
+        $('#result_vrt').val(vrt);
         $('#result_fieldsnames').val(cleanfields.join(parsed.meta.delimiter));
-        
-
-
     });
 
     $('#download_link').on('click', function(){
+        var filename = 'monFichier';
+        if ($('#uploaded_csv_name').val() != '') {
+            filename = $('#uploaded_csv_name').val().replace('.csv','');
+        }
+        $('#download_link').attr('download', filename + '.csvt');
         var text = $('#result_csvt').val();
         var data = new Blob([text], {type: 'text/plain'});
         var url = window.URL.createObjectURL(data);
-        document.getElementById('download_link').href = url;       
+        document.getElementById('download_link').href = url;
     });
 
+
+    $('#download_link_vrt').on('click', function(){
+        var filename = 'monFichier';
+        if ($('#uploaded_csv_name').val() != '') {
+            filename = $('#uploaded_csv_name').val().replace('.csv','');
+        }
+        $('#download_link_vrt').attr('download', filename + '.vrt');
+        var text = $('#result_vrt').val();
+        var data = new Blob([text], {type: 'text/plain'});
+        var url = window.URL.createObjectURL(data);
+        document.getElementById('download_link_vrt').href = url;
+    });
 });
 
 function whatype(data){
@@ -334,9 +405,11 @@ return `
             <option value="Time">Time</option>
             <optgroup label="Géométrie">
                 <option value="WKT">WKT</option>
+                <option value="WKB">WKB</option>
                 <option value="CoordX">CoordX</option>
                 <option value="CoordY">CoordY</option>
                 <option value="CoordZ">CoordZ</option>
+                <option value="CoordM">CoordM</option>
             <optgroup>
             </select>
         </td>
@@ -353,6 +426,8 @@ function mode(arr){
 
 function showFile() {
     var file = document.querySelector('input[type=file]').files[0];
+    $('#uploaded_csv_name').val(file['name']);
+    
     var reader = new FileReader();
     reader.onload = function (event) {
         $('#csv_colle').val(event.target.result);
@@ -376,6 +451,17 @@ function string_to_slug(str) {
     .replace(/-+/g, '_'); // collapse dashes
 
   return str;
+}
+
+function getVrtBaseTemplate(layername, fields){
+    var template = `<OGRVRTDataSource>
+    <OGRVRTLayer name="${layername}">
+        <SrcDataSource relativeToVRT="1">${layername}.csv</SrcDataSource>
+        <!-- <SrcSQL dialect="sqlite">SELECT * FROM ${layername}</SrcSQL> -->
+        ${fields}
+    </OGRVRTLayer>
+</OGRVRTDataSource>`;
+return template;
 }
 
 </script>
