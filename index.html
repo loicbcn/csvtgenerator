@@ -112,7 +112,7 @@ body {
     #tbseltypes th, #tbseltypes td{ padding:4px; }
     #tbseltypes th {border-bottom: 2px solid #333;}
     #tbseltypes td{ border-bottom: 1px dotted #333; }
-    h3 label, h3 a, h3 sup { font-weight:normal; font-size: 1.4rem; }
+    h3 label, h3 a, h3 sup, h3 span { font-weight:normal; font-size: 1.4rem; }
     </style>
 </head>
 <body>
@@ -134,7 +134,11 @@ body {
     et <a href="https://gdal.org/drivers/vector/csv.html">là</a> pour plus d'information).
 
     </p>
-    <h3>Csv:</h3>
+    <h3>Csv:  
+        <label for="limittestdata">Nombre max de données testées:</label> 
+        <input type="text" id="limittestdata" value="10000">
+        <span id="phraselimit"></span>
+    </h3>
     <label for="csv_colle">Coller le texte csv ici, ou charger un fichier <sup>(1)</sup> 
         <input type="file" id="uploaded_csv" onchange="showFile()">
         <input type="hidden" id="uploaded_csv_name" value="">
@@ -152,8 +156,8 @@ body {
     </div>
     <h3>VRT <input type="checkbox" id="vrtusecleanfields" value="1">
         <label for="vrtusecleanfields">Utiliser les noms de champs "nettoyés"</label> --- 
-        <input type="text" id="vrtsrs" value="2154">
         <label for="vrtsrs">Spécifier un sytème de projection si nécessaire</label>
+        <input type="text" id="vrtsrs" value="2154"> --- 
         <a id="download_link_vrt" download="mon.vrt" href=”” >Télécharger le vrt</a>
     </h3>
     <textarea id="result_vrt"></textarea>
@@ -178,6 +182,16 @@ License: MIT
 
 $(function(){
     var parsed;
+    var limit = 10000; // Nombre max de données testées.
+    $('#limittestdata').on('change',function(){
+        var newlimit = $('#limittestdata').val();
+        if (isInt(newlimit)){
+            limit = newlimit;
+        }
+        $('#csv_colle').trigger( "input" );
+    });
+
+    var limitlines = 100; // Nombre max de lignes testées.
     // Vider les infos du champ file
     $('#uploaded_csv_name, #uploaded_csv').val('');
 
@@ -185,14 +199,29 @@ $(function(){
         $('#uploaded_csv_name, #uploaded_csv').val('');
     });
 
-    $('#traite_csv_colle').on('click', function(){
-        var csv_colle = $.trim($('#csv_colle').val());
-        // Transforme les données csv en array
+    $('#csv_colle').on('input', function(){
+        var csv_colle = $('#csv_colle').val();
         parsed = Papa.parse(csv_colle);
+        var nbdatalines = parsed.data.length - 1;
+        var nbcols = parsed.data[0] ? parsed.data[0].length : 1;
+
+        limitlines = Math.floor(limit/nbcols);
+        var phrase = `Ce csv contient <strong>${nbcols}</strong> colonnes et <strong>${nbdatalines}</strong> lignes. 
+        Soient ${nbcols*nbdatalines} données à examiner. La limite étant fixée à <strong>${limit}</strong>, au maximum, <strong>${limitlines}</strong> lignes seront testées.`;
+        $('#phraselimit').html(phrase);
+    });
+
+    $('#traite_csv_colle').on('click', function(){
+        // Ne rien faire si pas de csv passé via le textarea
+        if (!parsed || parsed.errors.length > 0) return;
+        // var csv_colle = $.trim($('#csv_colle').val());
+        // Transforme les données csv en array
+        // parsed = Papa.parse(csv_colle);
 
         var types = [];
         var mytype;
 
+        var nbtest = 0;
         // Pour chaque ligne du csv
         for (var i=0; i<parsed.data.length; i++) {
             // i=0 -> il s'agit des entêtes, on crée une entrée par entête
@@ -205,8 +234,10 @@ $(function(){
                 for (var j=0; j<parsed.data[i].length; j++) {
                     mytype = whatype(parsed.data[i][j]);
                     types[j]['type'].push(mytype);
+                    nbtest++;
                 }                
             }
+            if (i >= limitlines) { break;}
         }
 
         // On propose un formulaire avec tous les champs trouvés, et leur type
@@ -430,7 +461,7 @@ function showFile() {
     
     var reader = new FileReader();
     reader.onload = function (event) {
-        $('#csv_colle').val(event.target.result);
+        $('#csv_colle').val(event.target.result).trigger( "input" );
     }
     reader.readAsText(file);
 }
