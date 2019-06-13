@@ -157,7 +157,7 @@ body {
     <h3>VRT <input type="checkbox" id="vrtusecleanfields" value="1">
         <label for="vrtusecleanfields">Utiliser les noms de champs "nettoyés"</label> --- 
         <label for="vrtsrs">Spécifier un sytème de projection si nécessaire</label>
-        <input type="text" id="vrtsrs" value="2154"> --- 
+        <input type="text" id="vrtsrs" value="EPSG:2154"> --- 
         <a id="download_link_vrt" download="mon.vrt" href=”” >Télécharger le vrt</a>
     </h3>
     <textarea id="result_vrt"></textarea>
@@ -305,7 +305,7 @@ $(function(){
         }
         if (vrtpointgeom.length > 0) {
             var xyzmFields = vrtpointgeom.join(' ');
-            var layersrs = '2154';
+            var layersrs = 'EPSG:2154';
             if ($('#vrtsrs').val() != '') {
                 layersrs = $('#vrtsrs').val();
             }
