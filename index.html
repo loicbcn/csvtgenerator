@@ -1,1 +1,452 @@
-<h1>Test</h1>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+    <title>Création de .csvt pour fichiers .csv</title>
+    <link rel="stylesheet" type="text/css" href="style/knacss_min.css">
+    <style>
+    body {font-size:1.4rem;}
+    #informations {display:none;}
+    #container{ padding: 1rem; }
+    #csv_colle, #result_csvt, #result_fieldsnames, #result_vrt{ 
+        width:100%; 
+        height:150px; 
+    	font-size: 1.2rem;
+	    line-height: 1.2rem;
+	    padding: 0.3rem;
+        white-space: pre;
+    	background: linear-gradient(-90deg, rgba(0, 0, 0, .01) 1px, transparent 1px), linear-gradient(rgba(0, 0, 0, .01) 1px, transparent 1px), linear-gradient(-90deg, rgba(0, 0, 0, .01) 1px, transparent 1px), linear-gradient(rgba(0, 0, 0, .01) 1px, transparent 1px), linear-gradient(transparent 3px, transparent 3px, transparent 78px, transparent 78px), linear-gradient(-90deg, transparent 1px, transparent 1px), linear-gradient(-90deg, transparent 3px, transparent 3px, transparent 78px, transparent 78px), linear-gradient(transparent 1px, transparent 1px), transparent;
+	    background-size: 12px 12px, 12px 12px, 12px 12px, 12px 12px, 12px 12px, 12px 12px, 12px 12px, 12px 12px;
+	    background-color: #f8f8f8;
+        }
+    #tbseltypes{
+        border-collapse:collapse;
+    }
+
+    #tbseltypes tr:nth-child(even){ background-color:#e1e1e1;}
+    #tbseltypes th, #tbseltypes td{ padding:4px; }
+    #tbseltypes th {border-bottom: 2px solid #333;}
+    #tbseltypes td{ border-bottom: 1px dotted #333; }
+    h3 label, h3 a, h3 sup, h3 span { font-weight:normal; font-size: 1.4rem; }
+    input.number { text-align:right; }
+    .vspace {margin: 0.5rem 0;}
+    </style>
+</head>
+<body>
+<div id="container">
+    <h1>Création de .csvt pour fichiers .csv</h1>
+    <h3>Csv en entrée:</h3>
+    <label for="csv_colle">Coller le texte csv ici, ou charger un fichier
+        <input type="file" id="uploaded_csv" onchange="showFile()">
+        <input type="hidden" id="uploaded_csv_name" value="">
+    </label><br>
+
+    <div class="grid-4 has-gutter">
+        <div class="col-3"><textarea id="csv_colle"></textarea></div>
+        <div class="col-1">
+            <div id="phraselimit"></div>
+            <div>
+            <label for="limittestdata">Nombre max de données testées:</label> 
+            <input type="text" class="number" id="limittestdata" value="10000">
+            </div>
+        </div>
+    </div>
+    <div class="vspace">
+        <button type="button" class="btn--primary" id="traite_csv_colle">Traiter le csv</button>
+        (Lit le csv en entrée et propose pour chaque champ un type prédéfini qu'il est possible de modifier)
+    </div>
+    <h3>Résultat:</h3>
+    <div class="grid-2 has-gutter">
+        <div>
+            <h4>csvt</h4>
+            <div class="vspace">
+                <button id="generate" class="btn--primary" disabled>Générer le csvt</button>
+                <input type="checkbox" id="guillemets" class="switch" value="avec des guillemets" checked>
+                <label for="guillemets">Avec des guillemets</label> --- 
+                <a id="download_link" download="mon.csvt" href=”” >Télécharger le csvt</a>
+            </div>
+            <div id="contresultcsvt">
+            <textarea id="result_csvt"></textarea>
+            </div>
+            <h4>VRT</h4>
+            <div class="vspace">
+            <ul>
+                <li><input type="checkbox" class="switch" id="vrtusecleanfields" value="1">
+                <label for="vrtusecleanfields">Utiliser les noms de champs "nettoyés"</label>
+                </li>
+                <li><label for="vrtsrs">Spécifier un sytème de projection si nécessaire</label>
+                <input type="text" id="vrtsrs" value="EPSG:2154">
+                </li>
+                <li><a id="download_link_vrt" download="mon.vrt" href=”” >Télécharger le vrt</a></li>
+            </ul>
+           </div>
+            <textarea id="result_vrt"></textarea>
+            <h4>Noms de champs "nettoyés"</h4>
+            <p>Peut éventuellement remplacer la première ligne du csv avec des noms de colonnes plus proches de ce qu'attend une base de données (pas d'espace ni caractères spéciaux)</p>
+            <textarea id="result_fieldsnames"></textarea>
+
+
+        </div>
+        <div>
+            <div id="choixtype"></div>
+        </div>
+    </div>
+
+
+    <footer>
+    <h3>Informations</h3>
+        <p>
+        Afin d'indiquer à QGIS ou autre le format des champs composant un fichier csv, on peut accompagner ce fichier .csv d'un fichier .csvt portant le même nom.<br>
+        Cette page se propose de créer le .csvt à partir d'un échantillon du .csv qu'il faut coller dans le champ prévu à cet effet.    
+        </p>
+        <p>
+        Il est aussi possible de charger le fichier .csv. Attention cependant, en donnant un trop gros volume de données, le script de la page peut prendre beaucoup de temps.<br>
+        Le principe est donc plutôt de coller ou uploader un <strong>échantillon de données</strong> (toutes les colonnes, mais quelques lignes. 
+        A noter que ce sera le poste client qui souffrira et pas le serveur, car tout se passe côté client.<br>
+        Après avoir fourni le csv et cliqué sur "Traiter le csv", si tout se passe bien, la page propose pour chaque champ un type de donnée, basé sur la représentation des types
+        de valeur pour chaque champ. Par exemple, si un champ contient 12 valeurs de type chaîne et 5 de type entier, alors le type prédéfini est "String", etc... 
+        <br>
+        Pour chaque champ, il est possible de forcer le type à un autre que celui prédéfini. Il est aussi possible de saisir une précision. 
+        (voir <a href="https://docs.qgis.org/2.18/fr/docs/user_manual/managing_data_source/supported_data.html#csvt-files">ici</a> 
+        et <a href="https://gdal.org/drivers/vector/csv.html">là</a> pour plus d'information).
+        </p>
+        <p>
+        Pour lire le csv, la page utilise la librairie javascript "<a href="https://www.papaparse.com/">Papa Parse 5, the powerful, in-browser CSV parser for big boys and girls</a>", qui semble bien fonctionner.
+        </p>
+        <p>Cette page utilise aussi <a href="https://www.jquery.com/">jQuery</a>.</p>
+        <p>Ainsi que <a href="https://www.knacss.com/">KNACSS</a>.</p>
+    </footer>
+</div>
+<script src="js/jquery-3.4.1.min.js"></script>
+<script src="js/papaparse.min.js"></script>
+<script>
+
+$(function(){
+    var parsed;
+    var limit = 10000; // Nombre max de données testées.
+    $('#limittestdata').on('change',function(){
+        var newlimit = $('#limittestdata').val();
+        if (isInt(newlimit)){
+            limit = newlimit;
+        }
+        $('#csv_colle').trigger( "input" );
+    });
+
+    var limitlines = 100; // Nombre max de lignes testées.
+    // Vider les infos du champ file
+    $('#uploaded_csv_name, #uploaded_csv').val('');
+
+    $('#csv_colle').on('change', function(){
+        $('#uploaded_csv_name, #uploaded_csv').val('');
+    });
+
+    $('#csv_colle').on('input', function(){
+        var csv_colle = $('#csv_colle').val();
+        parsed = Papa.parse(csv_colle);
+        var nbdatalines = parsed.data.length - 1;
+        var nbcols = parsed.data[0] ? parsed.data[0].length : 1;
+
+        limitlines = Math.floor(limit/nbcols);
+        /*
+        var phrase = `Ce csv contient <strong>${nbcols}</strong> colonnes et <strong>${nbdatalines}</strong> lignes. 
+        Soient ${nbcols*nbdatalines} données à examiner. La limite étant fixée à <strong>${limit}</strong>, au maximum, <strong>${limitlines}</strong> lignes seront testées.`;
+        */
+       var phrase = `<ul>
+       <li><strong>${nbcols}</strong> colonnes</li>
+       <li><strong>${nbdatalines}</strong> lignes</li>
+       <li><strong>${nbcols*nbdatalines}</strong> données à examiner</li>
+       <li><strong>${limitlines}</strong> lignes max seront testées</li>
+       </ul>
+       `;
+        
+        $('#phraselimit').html(phrase);
+    });
+
+    $('#traite_csv_colle').on('click', function(){
+        // Ne rien faire si pas de csv passé via le textarea
+        if (!parsed || parsed.errors.length > 0) return;
+        // var csv_colle = $.trim($('#csv_colle').val());
+        // Transforme les données csv en array
+        // parsed = Papa.parse(csv_colle);
+
+        var types = [];
+        var mytype;
+
+        var nbtest = 0;
+        // Pour chaque ligne du csv
+        for (var i=0; i<parsed.data.length; i++) {
+            // i=0 -> il s'agit des entêtes, on crée une entrée par entête
+            if (i==0) {
+                for (var j=0; j<parsed.data[i].length; j++) {
+                    types.push({'nom' :parsed.data[i][j], 'type':[]});
+                }
+            } else {
+                // Pour toutes les lignes de données, on garde le type de données trouvé
+                for (var j=0; j<parsed.data[i].length; j++) {
+                    mytype = whatype(parsed.data[i][j]);
+                    types[j]['type'].push(mytype);
+                    nbtest++;
+                }                
+            }
+            if (i >= limitlines) { break;}
+        }
+
+        // On propose un formulaire avec tous les champs trouvés, et leur type
+        var html = '<table id="tbseltypes"><tr><th>Champs</th><th>Type prédéfini<sup>(2)</sup></th><th>Forcer le type</th><th>Précision</th></tr>';
+        var morecommon;
+        for (var k=0; k<types.length; k++) {
+            // Détecter le type le plus fréquemment rencontrer pour le champ
+            morecommon = mode(types[k]['type']);
+            html += htmlfield({'fid':k, 'nom':types[k]['nom'], 'type':morecommon});
+        }
+        html += '</table><div class="note"><sup>(2)</sup> Basé sur le type le plus fréquemment rencontré pour le champ</div>';
+
+        // Ecrire la liste des champs
+        $('#choixtype').empty().html(html);
+        // activer Le bouton generate
+        $('#generate').attr({disabled:false});
+    });
+
+    // Générer
+    $('#generate').on('click', function(){
+        var numfields = $('input[id^="type_"]', '#tbseltypes').length;
+        if (numfields == 0) {
+            alert('Aucun champ détecté.');
+            return false;
+        }
+        var csvt = [];
+        var cleanfields = [];
+        var seltype;
+        var forced = '';
+        var precision = '';
+        var guillemets = $('#guillemets').prop('checked');
+        var vrtFields = [];
+        var vrtusecleanfields = $('#vrtusecleanfields').prop('checked');
+        var vrtpointgeom = [];
+
+        for (i=0; i<numfields; i++) {
+            seltype = $('#type_' + i).val();
+            forced = $('#seltype_' + i).val();
+            precision = $('#precision_' + i).val();
+            if (forced != '') {
+                seltype = forced;
+            }
+            if ($.trim(precision) != '' && (isInt(precision) || isReal(precision)) && (precision*1 > 0 && precision.length < 4)) {
+                seltype += '(' + precision + ')';
+            }
+            if (guillemets) {
+                csvt.push('"' + seltype + '"');
+            } else {
+                csvt.push(seltype);
+            }
+            // ajout des noms de champs "nettoyés"
+            var cleaned = string_to_slug(parsed.data[0][i]);
+            cleanfields.push(cleaned);
+            
+            var fieldname = vrtusecleanfields ? cleaned : parsed.data[0][i]; 
+
+            if (seltype == 'WKT' || seltype == 'WKB') {
+                vrtFields.push(`<GeometryField encoding="${seltype}" name="${fieldname}" field="${fieldname}"/>`);
+            } else if (seltype == 'CoordX' || seltype == 'CoordY' || seltype == 'CoordZ' || seltype == 'CoordM') {
+                vrtpointgeom.push(seltype.substr(-1).toLowerCase() + '="' + fieldname + '"');
+            } else {
+                vrtFields.push(`<Field name="${fieldname}" src="${fieldname}" type="${seltype}" nullable="true"/>`);
+            }
+            
+        }
+        if (vrtpointgeom.length > 0) {
+            var xyzmFields = vrtpointgeom.join(' ');
+            var layersrs = 'EPSG:2154';
+            if ($('#vrtsrs').val() != '') {
+                layersrs = $('#vrtsrs').val();
+            }
+            vrtFields.push(`<GeometryField encoding="PointFromColumns" ${xyzmFields}/>`);
+            vrtFields.push(`<LayerSRS>${layersrs}</LayerSRS>`);
+        }
+        var filename = 'monFichier';
+        if ($('#uploaded_csv_name').val() != '') {
+            filename = $('#uploaded_csv_name').val().replace('.csv','');
+        }
+        var vrt = getVrtBaseTemplate(filename,vrtFields.join("\r\n\t"));
+ 
+        $('#result_csvt').val(csvt.join(','));
+        $('#result_vrt').val(vrt);
+        $('#result_fieldsnames').val(cleanfields.join(parsed.meta.delimiter));
+    });
+
+    $('#download_link').on('click', function(){
+        var filename = 'monFichier';
+        if ($('#uploaded_csv_name').val() != '') {
+            filename = $('#uploaded_csv_name').val().replace('.csv','');
+        }
+        $('#download_link').attr('download', filename + '.csvt');
+        var text = $('#result_csvt').val();
+        var data = new Blob([text], {type: 'text/plain'});
+        var url = window.URL.createObjectURL(data);
+        document.getElementById('download_link').href = url;
+    });
+
+
+    $('#download_link_vrt').on('click', function(){
+        var filename = 'monFichier';
+        if ($('#uploaded_csv_name').val() != '') {
+            filename = $('#uploaded_csv_name').val().replace('.csv','');
+        }
+        $('#download_link_vrt').attr('download', filename + '.vrt');
+        var text = $('#result_vrt').val();
+        var data = new Blob([text], {type: 'text/plain'});
+        var url = window.URL.createObjectURL(data);
+        document.getElementById('download_link_vrt').href = url;
+    });
+});
+
+function whatype(data){
+    var testamos = $.trim(data);
+    if (testamos == '') { // si vide, alors string
+        return 'String';
+    } else if (isValidDateTime(testamos)) {
+        return 'DateTime';
+    }
+    else if (isValidDate(testamos)) {
+        return 'Date';
+    } else if (isValidTime(testamos)) {
+        return 'Time';
+    } else if (testamos.length > 1 && testamos.substr(0,1) == '0') { // Par exemple INSEE COMM = 08000 -> string
+        return 'String';
+    } else if (isInt(testamos)) {
+        return 'Integer';
+    } else if (isReal(testamos.replace(',','.'))) { // Tester les valeurs telles que '50.5' et '50,5'
+        return 'Real';
+    } else {
+        return 'String';
+    }
+
+}
+
+function isInt(data) {
+    if (Math.floor(data) == data && $.isNumeric(data)) {
+        return true;
+    }
+    return false;
+}
+
+function isReal(data) {
+    if (Math.floor(data) != data && $.isNumeric(data)) {
+        return true;
+    }
+    return false;
+}
+
+function isValidDate(dateString) {
+    var testdate = new Date(dateString);
+    if (isInt(dateString.substr(0,4)) && isInt(testdate.getDate()) && dateString.length == 10) {
+        return true;
+    }
+    return false;
+}
+
+function isValidDateTime(dateString) {
+    var testdate = new Date(dateString);
+    if (isInt(dateString.substr(0,4)) && isInt(testdate.getDate()) && dateString.length > 10) {
+            return true;
+    }
+    return false;
+}
+
+function isValidDate_(dateString) {
+  var regEx = /^\d{4}-\d{2}-\d{2}$/;
+  if(!dateString.match(regEx)) return false;  // Invalid format
+  var d = new Date(dateString);
+  var dNum = d.getTime();
+  if(!dNum && dNum !== 0) return false; // NaN value, Invalid date
+  return d.toISOString().slice(0,10) === dateString;
+}
+
+function isValidTime(strTime) {
+    var regex = new RegExp("([0-1][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])");
+    if (regex.test(strTime)) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+function htmlfield(data){
+return `
+    <tr>
+        <td><label for="type_${data.fid}">${data.nom}</label></td>
+        <td><input type="text" id="type_${data.fid}" value="${data.type}"></td>
+        <td>
+            <select id="seltype_${data.fid}">
+            <option value="">Forcer le type</option>
+            <option value="String">String</option>
+            <option value="Integer">Integer</option>
+            <option value="Real">Real</option>
+            <option value="Date">Date</option>
+            <option value="DateTime">DateTime</option>
+            <option value="Time">Time</option>
+            <optgroup label="Géométrie">
+                <option value="WKT">WKT</option>
+                <option value="WKB">WKB</option>
+                <option value="CoordX">CoordX</option>
+                <option value="CoordY">CoordY</option>
+                <option value="CoordZ">CoordZ</option>
+                <option value="CoordM">CoordM</option>
+            <optgroup>
+            </select>
+        </td>
+        <td><input type="text" class="number" id="precision_${data.fid}" value=""></td>
+    </tr>`;
+}
+
+function mode(arr){
+    return arr.sort((a,b) =>
+          arr.filter(v => v===a).length
+        - arr.filter(v => v===b).length
+    ).pop();
+}
+
+function showFile() {
+    var file = document.querySelector('input[type=file]').files[0];
+    $('#uploaded_csv_name').val(file['name']);
+    
+    var reader = new FileReader();
+    reader.onload = function (event) {
+        $('#csv_colle').val(event.target.result).trigger( "input" );
+    }
+    reader.readAsText(file);
+}
+
+function string_to_slug(str) {
+  str = str.replace(/^\s+|\s+$/g, ''); // trim
+  str = str.toLowerCase();
+  
+  // remove accents, swap ñ for n, etc
+  var from = "àáäâèéëêìíïîòóöôùúüûñç·/_,:;";
+  var to   = "aaaaeeeeiiiioooouuuunc------";
+  for (var i=0, l=from.length ; i<l ; i++) {
+    str = str.replace(new RegExp(from.charAt(i), 'g'), to.charAt(i));
+  }
+
+  str = str.replace(/[^a-z0-9 -]/g, '') // remove invalid chars
+    .replace(/\s+/g, '_') // collapse whitespace and replace by -
+    .replace(/-+/g, '_'); // collapse dashes
+
+  return str;
+}
+
+function getVrtBaseTemplate(layername, fields){
+    var template = `<OGRVRTDataSource>
+    <OGRVRTLayer name="${layername}">
+        <SrcDataSource relativeToVRT="1">${layername}.csv</SrcDataSource>
+        <!-- <SrcSQL dialect="sqlite">SELECT * FROM ${layername}</SrcSQL> -->
+        ${fields}
+    </OGRVRTLayer>
+</OGRVRTDataSource>`;
+return template;
+}
+
+</script>
+</body>
+</html>
