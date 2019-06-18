@@ -312,7 +312,7 @@ function whatype(data){
         return 'Date';
     } else if (isValidTime(testamos)) {
         return 'Time';
-    } else if (testamos.length > 1 && testamos.substr(0,1) == '0') { // Par exemple INSEE COMM = 08000 -> string
+    } else if (testamos.length > 1 && testamos.substr(0,1) == '0' && testamos.indexOf('.') != -1 && testamos.indexOf(',') != -1) { // Par exemple INSEE COMM = 08000 -> string
         return 'String';
     } else if (isInt(testamos)) {
         return 'Integer';
